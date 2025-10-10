@@ -1,0 +1,125 @@
+You might notice that I have a weird series of duplicate commits when adding the environment.yml file. This is because, at some point, I accidentally created an orphaned branch. I couldn't figure out what was going on, and stackoverflow was not revealing answers. I asked ChatGPT for some help—it was a bad prompt, but it got me pointed in the right direction, which is what I needed.
+
+Prompt: I am working in github. I have added a new file. When I stage my commit, tag it, and then push it with the tag, a tag is created on a separate tree but not on main. Still, github only shows one branch, which is main. Where is my commit going?
+
+Response:
+
+That’s a really good observation — what you’re seeing is actually a fairly common situation in Git when a **commit isn’t attached to any branch** (also known as a “dangling” commit or “orphan” commit), but is still **reachable through a tag**.
+
+Let’s unpack what’s happening step by step.
+
+---
+
+## 🧭 Likely Scenario
+
+You did something like:
+
+```bash
+git add newfile.txt
+git commit -m "Add new file"
+git tag v1.0
+git push origin v1.0
+```
+
+but **you didn’t push the branch** itself (e.g. `main`).
+
+So:
+
+* ✅ A new commit was created locally.
+* ✅ A tag pointing to that commit was created locally.
+* ✅ You pushed the **tag**.
+* ❌ But the commit is **not part of `main` on the remote**, because `main` itself was never updated with this commit.
+
+This means:
+
+* The remote now has a commit object (because the tag references it).
+* The tag `v1.0` points to this commit.
+* `main` on GitHub hasn’t moved — so when you look at the **branch view**, nothing changed.
+* When you look at **tags**, you’ll see your commit.
+
+This is why it “looks like” your commit went to a separate tree — it did. It’s not on any branch, just reachable by the tag.
+
+---
+
+## 🧪 How to Check This Locally
+
+Run:
+
+```bash
+git log --decorate --graph --oneline --all
+```
+
+This will show where the tag is and where `main` is.
+You’ll likely see something like:
+
+```
+abcd123 (tag: v1.0) Add new file
+1234abc (origin/main, main) Previous commit
+```
+
+Notice how the tag is ahead of main, but main hasn’t moved.
+
+---
+
+## 🧩 How to Fix It (If You Want the Commit on `main`)
+
+You have two options:
+
+### Option 1: Push your `main` branch too
+
+If your local `main` already includes that commit:
+
+```bash
+git push origin main
+```
+
+Now `main` on GitHub will include that commit, and the tag will be attached to a commit in the branch history.
+
+---
+
+### Option 2: Create a new branch at the tag (if it’s not on main)
+
+If you committed while in a detached HEAD or some other branch:
+
+```bash
+git branch main v1.0   # or whatever branch you want
+git push origin main
+```
+
+Or if you want to merge the tag’s commit into main:
+
+```bash
+git checkout main
+git merge v1.0
+git push origin main
+```
+
+---
+
+## 🧭 Why GitHub Shows Only One Branch
+
+GitHub lists only branches — not detached commits — in the branch view.
+The commit exists remotely (because of the tag) but is **not part of any branch**, so:
+
+* GitHub won’t show it under “main” history.
+* You can only access it by looking at the tag or commit hash directly.
+
+---
+
+✅ **Summary**
+
+* Your commit was pushed via a tag only, so it’s not on `main`.
+* It’s stored on GitHub but not part of a branch.
+* To make it visible in your branch history, push or merge it into `main`.
+
+---
+
+If you paste the output of:
+
+```bash
+git branch
+git status
+git log --oneline --decorate --graph -n 5
+```
+
+I can tell you exactly where your commit currently “lives” in the tree. Would you like to share that?
